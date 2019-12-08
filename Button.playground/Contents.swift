@@ -14,7 +14,7 @@ extension UIView {
         UIView.activate(constraints: [
             centerXAnchor.constraint(equalTo: view.centerXAnchor, constant: offset.horizontal),
             centerYAnchor.constraint(equalTo: view.centerYAnchor, constant: offset.vertical)
-            ])
+        ])
     }
 }
 
@@ -27,8 +27,8 @@ class ReactiveButton: UIControl {
     }()
 
     private var animator = UIViewPropertyAnimator()
-    private let normalColor = UIColor.blue
-    private let highlightedColor = UIColor.black
+    private let normalColor: UIColor = .gray
+    private let highlightedColor: UIColor = .blue
 
     enum IconName: String {
         case add
@@ -55,7 +55,7 @@ class ReactiveButton: UIControl {
     }
 
     private func sharedInit() {
-        backgroundColor = .gray
+        backgroundColor = normalColor
 
         addTarget(self, action: #selector(touchDown), for: [.touchDown, .touchDragEnter])
         addTarget(self, action: #selector(touchUp), for: [.touchUpInside, .touchDragExit, .touchCancel])
@@ -70,18 +70,17 @@ class ReactiveButton: UIControl {
     }
 
     func toggleIcon(isVisible: Bool) {
-        iconImageView.tintColor = isVisible ? .blue : .clear
-        print("is visible? \(isVisible) - selected color: \(iconImageView.tintColor!)")
+        iconImageView.tintColor = isVisible ? highlightedColor : .clear
     }
 
     @objc private func touchDown() {
         animator.stopAnimation(true)
-        iconImageView.tintColor = highlightedColor
+        backgroundColor = highlightedColor
     }
 
     @objc private func touchUp() {
         animator = UIViewPropertyAnimator(duration: 0.5, curve: .easeOut, animations: {
-            self.iconImageView.tintColor = self.normalColor
+            self.backgroundColor = self.normalColor
         })
         animator.startAnimation()
         tappedAction()
@@ -91,7 +90,22 @@ class ReactiveButton: UIControl {
 
 class MyViewController : UIViewController {
 
-    private var stickerAmount = 0
+    private var stickerAmount = 0 {
+        didSet {
+            stickersCount.text = "Amount = \(stickerAmount)"
+            stickersCount.sizeToFit()
+        }
+    }
+
+    private lazy var stickersCount: UILabel = {
+        let label = UILabel()
+        label.text = "Amount = \(stickerAmount)"
+        label.frame.origin = CGPoint(x: 16, y: 16)
+        label.textColor = .white
+        label.font = UIFont.systemFont(ofSize: 16, weight: .bold)
+        label.sizeToFit()
+        return label
+    }()
 
     private lazy var addButton: ReactiveButton = ReactiveButton(image: .add) { [weak self] in
         self?.addSticker()
@@ -115,13 +129,13 @@ class MyViewController : UIViewController {
         let view = UIView()
         view.backgroundColor = .black
         view.addSubview(containerStackView)
+        view.addSubview(stickersCount)
         containerStackView.center(in: view)
         self.view = view
     }
 
     private func addSticker() {
         stickerAmount+=1
-        print("sticker amount: \(stickerAmount)")
         if stickerAmount == 1 {
             animateContainer()
         }
@@ -130,17 +144,16 @@ class MyViewController : UIViewController {
     private func removeSticker() {
         guard stickerAmount >= 1 else { return }
         stickerAmount-=1
-        print("sticker amount: \(stickerAmount)")
         if stickerAmount == 0 {
             animateContainer()
         }
     }
 
     private func animateContainer() {
+        addButton.toggleIcon(isVisible: stickerAmount >= 1)
+        minusButton.toggleIcon(isVisible: stickerAmount >= 1)
+        minusButton.alpha = stickerAmount >= 1 ? 1 : 0
         UIView.animate(withDuration: 0.25) {
-            self.addButton.toggleIcon(isVisible: self.stickerAmount >= 1)
-            self.minusButton.toggleIcon(isVisible: self.stickerAmount >= 1)
-            self.minusButton.alpha = self.stickerAmount >= 1 ? 1 : 0
             self.minusButton.isHidden = self.stickerAmount < 1
             self.containerStackView.layoutIfNeeded()
         }
@@ -148,4 +161,3 @@ class MyViewController : UIViewController {
 }
 
 PlaygroundPage.current.liveView = MyViewController()
-//PlaygroundPage.current.needsIndefiniteExecution = true
